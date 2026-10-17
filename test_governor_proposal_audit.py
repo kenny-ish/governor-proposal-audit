@@ -76,6 +76,38 @@ class GovernorProposalAuditTests(unittest.TestCase):
         self.assertEqual(first["source"], "Compound Governor Bravo proposals")
         self.assertTrue(any(call[0] == "eth_call" for call in rpc.calls))
 
+    def test_oz_snapshot_block_is_not_started(self):
+        class StandardBoundaryRpc(FakeRpc):
+            def call(self, method, params):
+                if method == "eth_blockNumber":
+                    return hex(100)
+                if method == "eth_call":
+                    selector = params[0]["data"][2:10]
+                    if selector == tool.STATE_SELECTOR.hex():
+                        return "0x" + (0).to_bytes(32, "big").hex()
+                    if selector == tool.SNAPSHOT_SELECTOR.hex():
+                        return "0x" + (100).to_bytes(32, "big").hex()
+                    if selector == tool.DEADLINE_SELECTOR.hex():
+                        return "0x" + (200).to_bytes(32, "big").hex()
+                return super().call(method, params)
+
+        row = tool.inspect_proposals(StandardBoundaryRpc(), "0x" + "22" * 20, [1])["proposals"][0]
+        self.assertEqual(row["voting_window"], "not started")
+
+    def test_bravo_start_block_is_not_started(self):
+        class BravoBoundaryRpc(FakeRpc):
+            def call(self, method, params):
+                if method == "eth_blockNumber":
+                    return hex(REAL_PROPOSALS[392]["snapshot"])
+                return super().call(method, params)
+
+        row = tool.inspect_proposals(
+            BravoBoundaryRpc(),
+            "0xc0da02939e1441f497fd74f78ce7decb17b66529",
+            [392],
+        )["proposals"][0]
+        self.assertEqual(row["voting_window"], "not started")
+
     def test_standard_governor_methods_are_preferred(self):
         class StandardRpc(FakeRpc):
             def call(self, method, params):

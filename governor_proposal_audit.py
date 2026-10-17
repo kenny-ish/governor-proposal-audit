@@ -210,7 +210,7 @@ def inspect_proposals(client: JsonRpcClient, governor: str, proposal_ids: List[i
             "deadline_block": deadline,
             "current_block": latest_block,
             "blocks_until_deadline": max(0, deadline - latest_block),
-            "voting_window": "not started" if latest_block < snapshot else ("open" if latest_block <= deadline else "closed"),
+            "voting_window": "not started" if latest_block <= snapshot else ("open" if latest_block <= deadline else "closed"),
             "source": source,
         }
         if eta is not None:
